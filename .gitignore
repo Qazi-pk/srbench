@@ -6,6 +6,7 @@ results_*/
 *.swp
 tmp_*
 postprocessing/figs/*
+datasets/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
