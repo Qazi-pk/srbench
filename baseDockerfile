@@ -52,6 +52,7 @@ RUN apt update \
         # ca-certificates \
         curl \
         git \
+        procps \
         # wget \
         build-essential \
         libgmp3-dev \

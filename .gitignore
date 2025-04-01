@@ -1,9 +1,11 @@
 docker-compose.yml
+singularity
 *.lock.yml
 .idea
 results_*/
 *.swp
 tmp_*
+postprocessing/figs/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -43,6 +45,9 @@ wheels/
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+
+# Slurm debugging
+run_commands.*
 
 # Unit test / coverage reports
 htmlcov/
