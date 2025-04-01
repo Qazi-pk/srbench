@@ -1,7 +1,7 @@
 import numpy as np
+
 # PARETO FRONT TOOLS
 def check_dominance(p1,p2):
-
     flag1 = 0
     flag2 = 0
 
