@@ -155,6 +155,7 @@ def evaluate_model(
     ##########
     # valid options for eval_kwargs
     ##########
+    ecotracker=False,
     test_params={},
     max_train_samples=0,
     scale_x=True,
@@ -320,6 +321,7 @@ def evaluate_model(
 
     print('wrapper hyperparams:', hyper_params_wrapper)
 
+    grid_time = -1
     if len(algorithm.hyper_params)>1: # we need at least two hp configurations to do cv
         print('Starting to tune...')
         wrap_estimator = WrapEstimator(base_estimator=est)
@@ -336,23 +338,57 @@ def evaluate_model(
             verbose=1,
             cv=3
         )
-        t0t = time.time()
-        with parallel_backend('sequential', n_jobs=1):
-            grid_search.fit(X_train_scaled, y_train_scaled)
-        print('Tuning time measure:', time.time() - t0t)
-        
-        pd.DataFrame(grid_search.cv_results_).to_csv(
-            f'{save_file}_cv_log.csv', index=False)
 
-        # Extracting the nested structure and fitting the final model with entire training partition
-        est.set_params(**grid_search.best_params_['base_estimator_kwargs'])
-        est.fit(X_train_scaled, y_train_scaled)
-    else:
+        signal.signal(signal.SIGALRM, alarm_handler)
+        signal.alarm((args.FITTIME + 600)*len(algorithm.hyper_params))
         t0t = time.time()
+        try:
+            with parallel_backend('sequential', n_jobs=1):
+                grid_search.fit(X_train_scaled, y_train_scaled)
+                
+            pd.DataFrame(grid_search.cv_results_).to_csv(
+                f'{save_file}_cv_log.csv', index=False)
+
+            # Extracting the nested structure and fitting the final model with entire training partition
+            est.set_params(**grid_search.best_params_['base_estimator_kwargs'])
+        except TimeOutException:
+            print("="*80)
+            print('WARNING: gridsearch timed out. If the program does not handle SIGALRM, then it will be killed')
+            print("="*80)
+        finally:
+            signal.alarm(0)  # Cancel the alarm
+
+        grid_time = time.time() - t0t
+        print('Tuning time measure:', grid_time)
+        
+    # performing the final training --------------------------------------------
+    if ecotracker:
+        # file name should be something that will avoid parallel writing
+        tracker = eco2ai.Tracker(
+            project_name=dataset.split('/')[-1].split('.')[0], # dataset
+            experiment_description=f'{est_name} {random_state}', # ml method and random seed
+            file_name=os.path.join(results_path,id+"_eco2ai.csv"),
+            alpha_2_code='US'
+        )
+        tracker.start()
+
+    signal.signal(signal.SIGALRM, alarm_handler)
+    signal.alarm(args.FITTIME + 600)
+    t0t = time.time()
+    try:
         est.fit(X_train_scaled, y_train_scaled)
-        print('single fit time measure:', time.time() - t0t)
+    except TimeOutException:
+        print("="*80)
+        print('WARNING: fitting timed out. If the program does not handle SIGALRM, then it will be killed')
+        print("="*80)
+    finally:
+        signal.alarm(0)  # Cancel the alarm
 
     time_time = time.time() - t0t
+    print('single fit time measure:', time_time)
+
+    if ecotracker:
+        tracker.stop()
     
     if 'geneticengine' in est_name:
         est._is_fitted = True
@@ -368,6 +404,7 @@ def evaluate_model(
         'params':jsonify(params),
         'random_state':random_state,
         'time_time': time_time, 
+        'grid_time' : grid_time,
     }
 
     if sym_data:
@@ -501,6 +538,7 @@ if __name__ == '__main__':
     parser.add_argument('-fit_time_limit',action='store',dest='FITTIME',default=3600,
             type=int, help='Fit time limit (seconds) e.g. 3600 (1 hour). This is the maximum time for the fit method, not the job, make sure job time lim is greater than this.')
     parser.add_argument('--sym_data', action='store_false', dest='SYM_DATA', default=False)
+    parser.add_argument('--ecotracker', action='store_true', dest='ECOTRACKER', default=False)
     parser.add_argument('--scale_x', action='store_true', dest='SCALE_X', default=False) 
     parser.add_argument('--scale_y', action='store_true', dest='SCALE_Y', default=False)
     parser.add_argument('--skip_tuning',action='store_true', dest='SKIP_TUNE', 
@@ -539,6 +577,7 @@ if __name__ == '__main__':
                    args.ALG,
                    algorithm.est,  
                    algorithm.model, 
+                   ecotracker=args.ECOTRACKER,
                    test = args.TEST, 
                    **eval_kwargs
                   )

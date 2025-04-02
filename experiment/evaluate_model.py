@@ -218,9 +218,11 @@ def evaluate_model(
 
     if ecotracker:
         tracker.start()
-    t0t = time.time()
+
     signal.signal(signal.SIGALRM, alarm_handler)
     signal.alarm(MAXTIME + 600) # maximum time with some extra juice for finishing up
+
+    t0t = time.time()
     try:
         est.fit(X_train_scaled, y_train_scaled)
     except TimeOutException:
