@@ -7,14 +7,26 @@ import os
 import sys
 from improving_names import *
 
+# Where to load the results
 rdir = '../../results_blackbox/'
 if len(sys.argv) > 1:
     rdir = sys.argv[1]
 else:
     print('no rdir provided, using',rdir)
-    
-print('reading results from  directory', rdir)
-    
+print('reading results from directory', rdir)
+
+# Where to save the report
+sdir = '../../results/black-box/'
+if len(sys.argv) > 2:
+    sdir = sys.argv[2]
+else:
+    print('no sdir provided, using', sdir)
+
+print('saving summary to directory', sdir)
+if not os.path.exists(sdir):
+    print("Creating directory", sdir)
+    os.makedirs(sdir)
+
 ##########
 # load data from json
 ##########
@@ -23,6 +35,7 @@ comparison_cols = [
     'dataset',
     'algorithm',
     'random_state',
+    'start_time', # so we can find the last one to run
     'experiment_description', # ml method, random seed
     'duration(s)',
     'power_consumption(kWh)',
@@ -86,11 +99,9 @@ for col in ['algorithm','dataset']:
 ###############################
 # save results and summary data
 ###############################
-if not os.path.exists('../../results/black-box/'):
-    os.makedirs('../../results/black-box/')
     
-df_results.to_feather('../../results/black-box/power_consumption.feather')
-print('eco2ai data saved to ../../results/black-box/power_consumption.feather')
+df_results.to_feather(f'{sdir}/power_consumption.feather')
+print(f'eco2ai data saved to {sdir}/power_consumption.feather')
 
 ########
 print('mean trial count:')

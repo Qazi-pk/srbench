@@ -40,9 +40,9 @@ else:
     print('no sdir provided, using', sdir)
 
 print('saving summary to directory', sdir)
-if not os.path.exists(rdir):
-    print("Creating directory", rdir)
-    os.makedirs(rdir)
+if not os.path.exists(sdir):
+    print("Creating directory", sdir)
+    os.makedirs(sdir)
     
 ##########
 # load data from json
