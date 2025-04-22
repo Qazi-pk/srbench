@@ -50,8 +50,13 @@ est = ellyn(selection='afp',
 def complexity(est):
     return len(est.best_estimator_)
 
-def model(est):
-    return est.stack_2_eqn(est.best_estimator_)
+def model(est, X=None):
+    model_str = est.stack_2_eqn(est.best_estimator_)
+
+    # protected sqrt uses |cdot|. removing it
+    model_str = model_str.replace('|','')
+
+    return model_str
 
 def pre_train(est, X, y):
     """Adjust settings based on data before training"""

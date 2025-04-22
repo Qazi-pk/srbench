@@ -15,13 +15,13 @@ from sklearn.utils.validation import check_is_fitted, check_X_y, check_array
 
 
 function_set = [
-    ["add", "sub", "mul", "div", "sin", "cos", "exp", "log", "sqrt"],
+    # ["add", "sub", "mul", "div", "sin", "cos", "exp", "log", "sqrt"],
     ["add", "sub", "mul", "div", "sin", "cos", "exp", "log", "sqrt", "const"],
     # ["add", "sub", "mul", "div", "sin", "cos", "exp", "log", "sqrt", "poly"],
     ["add", "sub", "mul", "div", "sin", "cos", "exp", "log", "sqrt", "const", "poly"],
 ]
 degree = [2, 3]
-run_gp_meld = [True]
+run_gp_meld = [True, False]
 
 hyper_params = []
 for f, d in zip(function_set, degree):

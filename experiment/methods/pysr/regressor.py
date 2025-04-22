@@ -1,6 +1,29 @@
 from pysr import PySRRegressor
 from multiprocessing import cpu_count
 
+hyper_params = [
+    {
+        'niterations' : [1_000_000_000],
+        'maxsize' : [20],
+        'maxdepth' : [20],
+    },
+    {
+        'niterations' : [1_000_000],
+        'maxsize' : [30],
+        'maxdepth' : [20],
+    },
+    {
+        'niterations' : [1_000_000],
+        'maxsize' : [50],
+        'maxdepth' : [20],
+    },
+    {
+        'niterations' : [1_000_000],
+        'maxsize' : [30],
+        'maxdepth' : [20],
+        'population_size' : [200],
+    },
+]
 
 def complexity(est):
     return int(est.get_best()["complexity"])

@@ -1,8 +1,8 @@
 from ellyn import ellyn
 
 # 500,000 evaluations = 250,000 with 1 constant hill climbing iteration
-pop_sizes = [100, 500, 1000]
-gs = [2500, 500, 250]
+pop_sizes = [250, 500, 1000]
+gs = [2500, 1000, 500]
 op_lists=[
         ['n','v','+','-','*','/','exp','log','2','3', 'sqrt'],
         ['n','v','+','-','*','/', 'exp','log','2','3', 'sqrt',
@@ -45,6 +45,12 @@ def complexity(est):
     return len(est.best_estimator_)
 
 def model(est, X=None):
-    return est.stack_2_eqn(est.best_estimator_)
+    model_str = est.stack_2_eqn(est.best_estimator_)
+
+    # protected sqrt uses |cdot|. removing it
+    model_str = model_str.replace('|','')
+
+    return model_str
+
 
 eval_kwargs = dict(use_dataframe=False)

@@ -46,7 +46,7 @@ hyper_params = [
 #     g['select'] = [selRandom] if g['initial_height'] is None else [selTournamentDCD]
 
 est = PSTreeRegressor(regr_class=GPRegressor, tree_class=DecisionTreeRegressor,
-                      height_limit=6, n_pop=25, n_gen=500,
+                      height_limit=6, n_pop=25, n_gen=1_000,
                       normalize=True, basic_primitive='optimal',
                       select=selTournamentDCD, size_objective=False, afp=True)
 

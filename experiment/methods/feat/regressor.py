@@ -40,6 +40,7 @@ est:RegressorMixin = FeatRegressor(
                     gens=100,
                     max_time=60*60, # 1 hrs. Your algorithm should have this feature
                     max_depth=6,
+                    max_stall=0,
                     verbosity=0, # Try to keep it quiet
                     batch_size=100,
                     functions=['+','-','*','/','^2','^3','sqrt','sin','cos','exp','log'],

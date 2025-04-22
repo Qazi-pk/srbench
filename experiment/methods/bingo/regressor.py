@@ -140,6 +140,18 @@ from bingo.symbolic_regression.srbench_interface import (
 #     clo_threshold=1.0e-5,
 # )
 
+population_size = [100, 500, 1000]
+operators=[["+", "-", "*", "/", "sin", "cos", "exp", "log", "sqrt"],
+           ["+", "-", "*", "/", "log", "sqrt"]]
+
+hyper_params = []
+# for p in population_size:
+#     for ops in operators:
+#         hyper_params.append({
+#             'population_size':[p],
+#             'operators':[ops],
+#         })
+
 est = SymbolicRegressor(
     population_size=500,
     stack_size=24,
@@ -150,7 +162,7 @@ est = SymbolicRegressor(
     metric="mse",
     # parallel=False,
     clo_alg="lm",
-    max_time=350,
+    max_time=3500,
     max_evals=int(1e19),
     evolutionary_algorithm="AgeFitnessEA",
     clo_threshold=1.0e-5,

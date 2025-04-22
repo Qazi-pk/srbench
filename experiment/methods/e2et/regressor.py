@@ -34,8 +34,8 @@ except Exception as e:
     print(e)    
 
 
-max_input_points  = [50, 100, 250]
-n_trees_to_refine = [50, 100, 250]
+max_input_points  = [100, 250, 500]
+n_trees_to_refine = [100, 250, 500]
 max_number_bags   = [1, 5, 10]
 
 hyper_params = []

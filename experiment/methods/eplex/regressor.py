@@ -1,8 +1,8 @@
 from ellyn import ellyn
 
 # 500,000 evaluations = 250,000 with 1 constant hill climbing iteration
-pop_sizes = [100, 500, 1000]
-gs = [2500, 500, 250]
+pop_sizes = [250, 500, 1000]
+gs = [2500, 1000, 500]
 op_lists=[
         ['n','v','+','-','*','/','sin','cos','exp','log','2','3', 'sqrt'],
         ['n','v','+','-','*','/', 'exp','log','2','3', 'sqrt']
@@ -33,7 +33,7 @@ est = ellyn(selection='epsilon_lexicase',
             prto_arch_on=True,
             max_len = 64,
             max_len_init=20,
-            popsize=500,
+            popsize=1000,
             g=500,
             time_limit=60*60
             )

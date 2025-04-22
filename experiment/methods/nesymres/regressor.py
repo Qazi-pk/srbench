@@ -425,7 +425,7 @@ def evaluate_func(func_str, vars_list, X):
 
 n_restarts          = [1, 10, 20]
 total_number_of_eqs = [100, 250, 500]
-max_ops             = [5, 10, 20]
+max_ops             = [10, 20, 50]
 
 hyper_params = []
 for restarts, eqs in zip(n_restarts, total_number_of_eqs):

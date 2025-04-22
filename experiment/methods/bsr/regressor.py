@@ -1,7 +1,7 @@
 from bsr.bsr_class import BSR
 
 hyper_params = []
-for val, itrNum in zip([100,100,100],[5000,1000,500]):
+for val, itrNum in zip([50,100,250],[250,100,50]):
     for treeNum in [2,3]:
         hyper_params.append(
                     {'treeNum': [treeNum], 
@@ -11,7 +11,7 @@ for val, itrNum in zip([100,100,100],[5000,1000,500]):
 # initialize
 est = BSR(
           val=100,
-          itrNum=5000,
+          itrNum=500,
           treeNum=3,
           alpha1= 0.4, 
           alpha2= 0.4, 

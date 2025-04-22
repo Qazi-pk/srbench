@@ -8,6 +8,18 @@ hyper_params = [
     {
         'transfunctions' : ('Id,Tanh,Sin,Cos,Log,Exp,Sqrt',),
         'ytransfunctions' : ('Id,Exp,ATan,Tan,Tanh',),
+        'exponents' : ((-5,5),),
+        'ngens' : (1000,),
+    },
+    {
+        'transfunctions' : ('Id,Tanh,Sin,Cos,Log,Exp,Sqrt',),
+        'ytransfunctions' : ('Id,Exp,ATan,Tan,Tanh',),
+        'exponents' : ((-2,2),),
+        'ngens' : (1000,),
+    },
+    {
+        'transfunctions' : ('Id,Tanh,Sin,Cos,Log,Exp,Sqrt',),
+        'ytransfunctions' : ('Id,Exp,ATan,Tan,Tanh',),
         'exponents' : ((-5,5),)
     },
     {
