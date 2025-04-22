@@ -318,14 +318,16 @@ def evaluate_model(
 
         return int(c)
             
-    # Models that have complexity method
-    if not 'complexity' in dir(algorithm) or algorithm.complexity is None:        
-        algorithm.complexity = sympy_complexity
-    
     # Forcing all algorithms to use same notion of complexity
-    algorithm.complexity = sympy_complexity
+    cplx = sympy_complexity(est)
+    results['complexity_function'] = 'sympy'
 
-    results['model_size'] = algorithm.complexity(est)
+    # if sympy fails we will use their methods. This should be deprecated eventually
+    if cplx == -1 and ('complexity' in dir(algorithm) and algorithm.complexity is not None): 
+        cplx = algorithm.complexity(est)
+        results['complexity_function'] = 'user_defined'
+    
+    results['model_size'] = cplx
     results['target_noise']  = args.Y_NOISE
     results['feature_noise'] = args.X_NOISE
 

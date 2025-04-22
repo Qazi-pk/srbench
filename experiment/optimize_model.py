@@ -20,6 +20,7 @@ import numpy as np
 import json
 import re
 import os
+import eco2ai
 
 import sympy as sp
 import inspect
@@ -293,7 +294,9 @@ def evaluate_model(
     print('training',est)
     
     hyper_params_wrapper = []
-    for i, hp in enumerate(algorithm.hyper_params):
+    for i, hp in enumerate(algorithm.hyper_params + [{}]):
+        # By creating a configuration with an empty dict, we evaluate the algorithm with default parameters
+
         # time limits
         if hasattr(est, 'max_time'):
             hp['max_time'] = [args.FITTIME]
@@ -475,14 +478,16 @@ def evaluate_model(
 
         return int(c)
             
-    # Models that have complexity method
-    if not 'complexity' in dir(algorithm) or algorithm.complexity is None:        
-        algorithm.complexity = sympy_complexity
-    
     # Forcing all algorithms to use same notion of complexity
-    algorithm.complexity = sympy_complexity
+    cplx = sympy_complexity(est)
+    results['complexity_function'] = 'sympy'
 
-    results['model_size'] = int(algorithm.complexity(est))
+    # if sympy fails we will use their methods. This should be deprecated eventually
+    if cplx == -1 and ('complexity' in dir(algorithm) and algorithm.complexity is not None): 
+        cplx = algorithm.complexity(est)
+        results['complexity_function'] = 'user_defined'
+
+    results['model_size'] = int(cplx)
     results['target_noise']  = args.Y_NOISE
     results['feature_noise'] = args.X_NOISE
 
