@@ -36,7 +36,7 @@ Methods currently benchmarked:
 
 - **AFP** - [paper](http://dx.doi.org/10.1007/978-1-4419-7747-2_8)
 - **AFP_fe**
-- **AFP_ehc** = [paper](https://www.sciencedirect.com/science/article/abs/pii/S0952197616301294)
+- **AFP_ehc** - [paper](https://www.sciencedirect.com/science/article/abs/pii/S0952197616301294)
 - **Bingo** - [paper](https://dl.acm.org/doi/10.1145/3520304.3534031)
 - **Brush** - [code](https://github.com/cavalab/brush/tree/multi_armed_bandits)
 - **BSR** - [paper](https://arxiv.org/abs/1910.08892)
