@@ -71,7 +71,7 @@ python experiment/analyze.py datasets/blackbox/ \
     -images /path-to-your-images/ \
     -pretrained_dir /path-to-pretrained-model-checkpoints/ \
     -n_trials 30 -job_time_limit 8:00 -fit_time_limit 3600 \
-    -m 3000 -max_samples 40000 \
+    -m 10000 -max_samples 40000 \
     --scale_x --scale_y --slurm --ecotracker \
     -ml $cpu_ml
 
@@ -81,7 +81,7 @@ python experiment/analyze.py datasets/blackbox/ \
     -images /path-to-your-images/ \
     -pretrained_dir /path-to-pretrained-model-checkpoints/ \
     -n_trials 30 -job_time_limit 8:00 -fit_time_limit 3600 \
-    -m 8000 -max_samples 40000 \
+    -m 10000 -max_samples 40000 \
     --scale_x --scale_y --slurm --ecotracker \
     -ml $gpu_ml
 ```
@@ -109,7 +109,8 @@ python experiment/analyze.py datasets/firstprinciples \
     -results results_first_principles_tuning/ \
     -images /path-to-your-images/ \
     -pretrained_dir /path-to-pretrained-model-checkpoints/ \
-    -n_trials 30 -job_time_limit 4:00 -fit_time_limit 3600 \
+    -n_trials 30 -job_time_limit 8:00 -fit_time_limit 3600 \
+    -m 10000 -max_samples 40000 \
     --scale_x --scale_y --slurm \
     -ml $cpu_ml
 
@@ -118,7 +119,8 @@ python experiment/analyze.py datasets/firstprinciples \
     -results results_first_principles_tuning/ \
     -images /path-to-your-images/ \
     -pretrained_dir /path-to-pretrained-model-checkpoints/ \
-    -n_trials 30 -job_time_limit 4:00 -fit_time_limit 3600 \
+    -n_trials 30 -job_time_limit 8:00 -fit_time_limit 3600 \
+    -m 10000 -max_samples 40000 \
     --scale_x --scale_y --slurm \
     -ml $gpu_ml
 ```
