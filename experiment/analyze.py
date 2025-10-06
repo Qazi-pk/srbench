@@ -304,6 +304,11 @@ if __name__ == '__main__':
 {GPU_SETTING}
 hostname
 
+TZ='America/New_York'
+export TZ
+
+timedatectl
+
 echo 'singularity run --no-home --contain \'
 echo ' --bind $(pwd)/experiment:/srbench,$(pwd)/{DATASET_DIR}:/{DATASET_DIR} \'
 echo ' --bind ${PRETRAINED_DIR}:/srbench_pretrained/ \'

@@ -71,36 +71,23 @@ class WrapEstimator(BaseEstimator, RegressorMixin):
         print("Current parameters:")
         print(str(self.base_estimator_.get_params(deep=True)))
 
-        signal.signal(signal.SIGALRM, alarm_handler)
-
-        # ---------- SIGALRM ACTIVATION ----------
-        # uncomment so it get's the sigalrm --- ideally the estimator should have a max_time and also
-        # a method for handling the signal gracefully. If not sure, comment the line and just hope that 
-        # the fitting wont take too long
-        # signal.alarm(self.max_time + 600) # maximum time with some extra juice for finishing up
-
         if self.pre_train:
             self.pre_train(self.base_estimator_, X, y)
 
         t0t = time.time()
-        try:
-            self.base_estimator_.fit(X, y)
-            
-            print("Fitting completed successfully")
-            print("Final parameters:")
-            print(str(self.base_estimator_.get_params(deep=True)))
-            
-            # Calculate training score
-            pred = self.base_estimator_.predict(X)
-            train_score = r2_score(y, pred)
-            print(f"Training R2 score: {train_score:.4f}")
-        except TimeoutError:
-            print('WARNING: fitting timed out')
-        finally:
-            signal.alarm(0)  # Cancel the alarm
-        # -------------------------------------------------
 
-        # creating a parameter_ so sklearn understands that the model was fitted
+        self.base_estimator_.fit(X, y)
+        
+        print("Fitting completed successfully")
+        print("Final parameters:")
+        print(str(self.base_estimator_.get_params(deep=True)))
+        
+        # Calculate training score
+        pred = self.base_estimator_.predict(X)
+        train_score = r2_score(y, pred)
+        print(f"Training R2 score: {train_score:.4f}")
+        # creating a parameter_ with trailing underscore,
+        # so sklearn understands that the model was fitted
         self.fitting_time_ = time.time() - t0t
         
         return self
@@ -366,6 +353,7 @@ def evaluate_model(
         
     # performing the final training --------------------------------------------
     if ecotracker:
+        print("Initializing ecotracker")
         # file name should be something that will avoid parallel writing
         tracker = eco2ai.Tracker(
             project_name=dataset.split('/')[-1].split('.')[0], # dataset
@@ -392,6 +380,10 @@ def evaluate_model(
 
     if ecotracker:
         tracker.stop()
+        # Read emission data
+        df_eco2ai = pd.read_csv(os.path.join(results_path,id+"_eco2ai.csv"), sep=',')
+        print("eco2ai tracker log")
+        print(df_eco2ai.T)
     
     if 'geneticengine' in est_name:
         est._is_fitted = True
@@ -472,8 +464,7 @@ def evaluate_model(
         try:
             c = complexity(get_sympy_model(sympy_str, dataset))
         except:
-            print(f"{est_name} does not have a complexity() method, and does not"
-                " generate sympy-compatible expressions. setting to -1")
+            print(f"{est_name} does not generate sympy-compatible expressions. setting to -1")
             return -1
 
         return int(c)
@@ -485,6 +476,8 @@ def evaluate_model(
     # if sympy fails we will use their methods. This should be deprecated eventually
     if cplx == -1 and ('complexity' in dir(algorithm) and algorithm.complexity is not None): 
         cplx = algorithm.complexity(est)
+        print(f"{est_name} provides a user defined complexity. We will use it, but "
+                "results may not be directly comparable")
         results['complexity_function'] = 'user_defined'
 
     results['model_size'] = int(cplx)
