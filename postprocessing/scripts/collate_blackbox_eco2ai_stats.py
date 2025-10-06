@@ -96,6 +96,23 @@ df_results = df_results[df_results["symbolic_alg"]==True].reset_index(drop=True)
 for col in ['algorithm','dataset']:
     print(df_results[col].nunique(), col+'s')
 
+##################################
+# Keeping only the last record
+##################################
+
+# even if the job is killed due to max_time the eco2AI will save the info
+# (the file is generated before the experiment is fully finished).
+# Here we keep only the last execution:
+print(df_results.shape)
+
+df_results['start_time'] = pd.to_datetime(df_results['start_time'])
+df_results = df_results.dropna(subset=['power_consumption(kWh)', 'CO2_emissions(kg)'])\
+                      .sort_values(['algorithm', 'dataset', 'random_state', 'start_time'])\
+                     .drop_duplicates(subset=['algorithm', 'dataset', 'random_state'], keep='last')\
+                     .reset_index(drop=True)
+
+print(df_results.shape)
+
 ###############################
 # save results and summary data
 ###############################
