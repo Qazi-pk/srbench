@@ -1,385 +1,331 @@
-import pdb
-import pandas as pd
+"""
+Job Submission
+--------------
+
+This script automates the execution of machine learning experiments on multiple
+datasets. It can run locally or submit jobs to a SLURM cluster using Singularity
+containers.
+
+Features:
+- Avoids rerunning completed experiments unless --noskips is specified.
+- Supports adding noise, scaling, and symbolic dataset handling.
+- Parallel local execution with joblib.
+
+Usage:
+    python run_experiments.py <dataset_dir> [options]
+
+Example:
+    python run_experiments.py pmlb/datasets -ml sklearn_rf,afp_ehc --slurm -n_jobs 4
+
+"""
+
+import os
+import sys
+import shlex
+import argparse
 import subprocess
+import pandas as pd
 import numpy as np
 from glob import glob
-import argparse
-import os, errno, sys
 from joblib import Parallel, delayed
-from seeds import SEEDS
 from yaml import load, Loader
+from seeds import SEEDS
 
-if __name__ == '__main__':
-    # parse command line arguments
+
+def parse_args():
+    """Parse command line arguments for experiment configuration."""
+
     parser = argparse.ArgumentParser(
-            description="An analyst for quick ML applications.", add_help=False)
-    parser.add_argument('DATASET_DIR', type=str,
-                        help='Dataset directory like (pmlb/datasets)')
-    parser.add_argument('-pretrained_dir', action='store', dest='PRETRAINED_DIR', default="/", type=str,
-                        help='Folder with pre trained models or checkpoints')
-    parser.add_argument('-h', '--help', action='help',
-                        help='Show this help message and exit.')
-    parser.add_argument('-ml', action='store', dest='LEARNERS',default=None,
-            type=str, help='Comma-separated list of ML methods to use (should '
-            'correspond to a py file name in methods/)')
-    parser.add_argument('--local', action='store_true', dest='LOCAL', default=False, 
-            help='Run locally as opposed to on LPC')
-    parser.add_argument('--slurm', action='store_true', dest='SLURM', default=False, 
-            help='Run on a SLURM scheduler as opposed to on LPC')
-    parser.add_argument('--noskips', action='store_true', dest='NOSKIPS', default=False, 
-            help='Overwite existing results if found')
-    parser.add_argument('--skip_tuning', action='store_true', dest='SKIP_TUNE', default=False, 
-            help='Skip tuning step')
-    parser.add_argument('-A', action='store', dest='A', default='plgsrbench', 
-            help='SLURM account')
-    parser.add_argument('--ecotracker', action='store_true', dest='ECOTRACKER', default=False)
-    parser.add_argument('--sym_data',action='store_true', dest='SYM_DATA', default=False, 
-            help='Specify a symbolic dataset')            
-    parser.add_argument('--save_population', action='store_true', dest='SAVE_POP', default=False)
-    parser.add_argument('--tuned',action='store_true', dest='TUNED', default=False, 
-            help='Run tuned version of estimators. Only applies when ml=None')
-    parser.add_argument('-n_jobs',action='store',dest='N_JOBS',default=1,type=int,
-            help='Number of parallel jobs')
-    parser.add_argument('-job_time_limit',action='store',dest='TIME',default='48:00',
-            type=str, help='Job time limit (hr:min) e.g. 24:00. This is the maximum time for the job, not the fit method.')
-    parser.add_argument('-fit_time_limit',action='store',dest='FITTIME',default=3600,
-            type=int, help='Fit time limit (seconds) e.g. 3600 (1 hour). This is the maximum time for the fit method, not the job.')
-    parser.add_argument('-seed',action='store',dest='SEED',default=None,
-            type=int, help='A specific random seed')
-    parser.add_argument('-n_trials',action='store',dest='N_TRIALS',default=1,
-            type=int, help='Number of parallel jobs')
-    parser.add_argument('-label',action='store',dest='LABEL',default='class',
-            type=str,help='Name of class label column')
-    parser.add_argument('-results',action='store',dest='RDIR',default='results',
-            type=str,help='Results directory')
-    parser.add_argument('-images',action='store',dest='SDIR',default='../singularity',
-            type=str,help='Singularity (.sif) images directory')
-    parser.add_argument('-q',action='store',dest='QUEUE',
-                        default='epistasis_long',
-                        type=str,help='LSF queue')
-    parser.add_argument('-script',action='store',dest='SCRIPT',
-                        default='evaluate_model',
-                        type=str,help='Python script to run')
-    parser.add_argument('-m',action='store',dest='M',default=8192,type=int,
-            help='LSF memory request and limit (MB)')
-    parser.add_argument('-max_samples',action='store',  type=int, default=0,
-                        help='number of training samples')
-    parser.add_argument('-starting_seed',action='store',dest='START_SEED',
-                        default=0,type=int, help='seed position to start with')
-    parser.add_argument('-test',action='store_true', dest='TEST', 
-                       help='Used for testing a minimal version')
-    parser.add_argument('-target_noise',action='store',dest='Y_NOISE',
-                        default=0.0, type=float, help='Gaussian noise to add'
-                        'to the target')
-    parser.add_argument('-feature_noise',action='store',dest='X_NOISE',
-                        default=0.0, type=float, help='Gaussian noise to add'
-                        'to the target')
-    parser.add_argument('-job_limit',action='store',dest='JOB_LIMIT',
-                        default=5000, type=int, 
-                        help='Limit number of jobs submitted at once')
-    parser.add_argument('--scale_x', action='store_true',
-                        dest='SCALE_X', default=False) 
-    parser.add_argument('--scale_y', action='store_true',
-                        dest='SCALE_Y', default=False)
+        description=("Run and manage machine learning experiments locally or on SLURM clusters. "
+                     "Use -h/--help to see how to configure this file."),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=True
+    )
 
-    args = parser.parse_args()
-     
-    if args.SLURM and args.QUEUE == 'epistasis_long':
-        print('setting queue to plgrid')
-        args.QUEUE = 'plgrid'
+    # Script name
+    parser.add_argument("-script", dest="script", type=str, default="evaluate_model", help="Name of Python script to execute inside container.")
 
-    if args.LEARNERS == None:
-        learners = [ml.split('/')[-2]
-                    for ml in glob('experiment/methods/*/regressor.py', recursive = True) 
-                if not ml.split('/')[-1].startswith('_')]
+    # Directories and paths
+    parser.add_argument("dataset_dir", type=str, help="Path to dataset directory (e.g., pmlb/datasets).")
+    parser.add_argument("-pretrained_dir", dest="pretrained_dir", type=str, default="/", help="Folder with pre-trained models or checkpoints.")
+    parser.add_argument("-results", dest="results_dir", type=str, default="results", help="Results output directory.")
+    parser.add_argument("-images", dest="singularity_dir", type=str, default="../singularity", help="Directory containing Singularity (.sif) images. Required when using SLURM.")
+
+    # Experiment configuration
+    parser.add_argument("-ml", dest="learners", type=str, default=None, help="Comma-separated list of ML methods (must match filenames in experiment/methods).")
+    parser.add_argument("--sym_data", action="store_true", help="Specify if datasets are symbolic.")
+    parser.add_argument("--save_population", action="store_true", help="Save population at the end of the run.")
+    parser.add_argument("--skip_tuning", action="store_true", help="Skip hyperparameter tuning step.")
+    parser.add_argument("--tuned", action="store_true", help="Run tuned version of estimators.")
+    parser.add_argument("--scale_x", action="store_true", help="Apply feature scaling.")
+    parser.add_argument("--scale_y", action="store_true", help="Apply target scaling.")
+    parser.add_argument('--ecotracker', action='store_true', default=False, help='Enables ecotracker. May conflict with SO.')
+
+    # Noise injection
+    parser.add_argument("-target_noise", dest="y_noise", type=float, default=0.0, help="Gaussian noise added to target variable.")
+    parser.add_argument("-feature_noise", dest="x_noise", type=float, default=0.0, help="Gaussian noise added to input features.")
+
+    # Execution mode and resources
+    parser.add_argument("--no_docker", action="store_true", help="Run jobs locally without using docker images.")
+    parser.add_argument("--local", action="store_true", help="Run jobs locally.")
+    parser.add_argument("--slurm", action="store_true", help="Submit jobs to SLURM cluster.")
+    parser.add_argument("-n_jobs", type=int, default=1, help="Number of parallel jobs.")
+    parser.add_argument("-fit_time_limit", dest="fit_time", type=int, default=3600, help="Time limit (in seconds) for model fitting.")
+    parser.add_argument("-job_time_limit", dest="job_time", type=str, default="48:00", help="Maximum job walltime (HH:MM).")
+    parser.add_argument("-m", dest="M", type=int, default=8192, help="Memory allocation per job (MB).")
+
+    # Reproducibility
+    parser.add_argument("-seed", dest="seed", type=int, default=None, help="Random seed for reproducibility.")
+    parser.add_argument("-n_trials", dest="n_trials", type=int, default=1, help="Number of trials per learner.")
+    parser.add_argument("-starting_seed", dest="start_seed", type=int, default=0, help="Starting seed index.")
+
+    # Behavior controls
+    parser.add_argument("--noskips", action="store_true", help="Overwrite existing results.")
+    parser.add_argument("--test", action="store_true", help="Run in test mode with minimal configuration.")
+    parser.add_argument("-job_limit", type=int, default=5000, help="Maximum number of concurrent jobs.")
+    parser.add_argument("-max_samples", type=int, default=0, help="Limit number of training samples.")
+
+    return parser.parse_args()
+
+
+def detect_datasets(dataset_dir):
+    """Return sorted list of dataset file paths based on dataset size."""
+
+    if dataset_dir.endswith(".tsv.gz"):
+        datasets = [dataset_dir]
     else:
-        learners = [('tuned' if (args.TUNED or args.SCRIPT=='optimize_model') else '')+ml
-                    for ml in args.LEARNERS.split(',')] # learners
-    print(f'{len(learners)} learners:',learners)
+        datasets = glob(os.path.join(dataset_dir, "*/*.tsv.gz"))
 
-    print('dataset directory:',args.DATASET_DIR)
-    print('results directory:',args.RDIR)
-    print('script:',args.SCRIPT)
-
-    if args.Y_NOISE > 0:
-        print('using target-noise', str(args.Y_NOISE))
-    if args.X_NOISE > 0:
-        print('using feature-noise', str(args.X_NOISE))
-
-    if args.DATASET_DIR.endswith('.tsv.gz'):
-        print('running specific dataset',args.DATASET_DIR)
-        datasets = [args.DATASET_DIR]
-    elif args.DATASET_DIR.endswith('*'):
-        print('capturing glob',args.DATASET_DIR+'/*.tsv.gz')
-        datasets = glob(args.DATASET_DIR+'*/*.tsv.gz')
-    else:
-        datasets = glob(args.DATASET_DIR+'/*/*.tsv.gz')
-    print('found',len(datasets),'datasets')
-
-    # sort datasets by number of samples x features
     dataset_sizes = []
     for dataset in datasets:
-        dataname = dataset.split('/')[-1].split('.tsv.gz')[0]
-        statsname = '/'.join(dataset.split('/')[:-1]+['summary_stats.tsv'])
-        stats_df = pd.read_csv(statsname, sep='\t')
-        dataset_sizes.append((stats_df['n_instances']*stats_df['n_features']).values[0])
-    datasets = [datasets[i] for i in np.argsort(dataset_sizes)]
-
-    #####################################################
-    ## look for existing jobs
-    #####################################################
-    current_jobs = []
-    if args.SLURM:
-        res = subprocess.check_output(['squeue -o "%j"'],shell=True)
-        current_jobs = res.decode().split('\n')
+        # grab regression datasets
+        metadata = load(
+            open('/'.join(dataset.split('/')[:-1])+'/metadata.yaml','r'),
+                Loader=Loader)
+        if metadata['task'] != 'regression':
+            print(f"Skipping non-regression dataset: {dataset}")
+            continue
         
-    elif not args.LOCAL:
-        res = subprocess.check_output(['bjobs -o "JOB_NAME" -noheader'],shell=True)
-        current_jobs = res.decode().split('\n')
+        dataset_sizes.append(metadata["n_instances"] * metadata["n_features"])
 
-    # current_jobs = ['_'.join(cj.split('_')[:-1]) for cj in current_jobs]
-    # print(current_jobs)
+    # Sort datasets by datapoints (so faster jobs get submitted first)
+    return [datasets[i] for i in np.argsort(dataset_sizes)]
+
+
+def detect_learners(args):
+    """Determine list of learners to use."""
+
+    if args.learners is None:
+        return [ml.split("/")[-2] for ml in glob("experiment/methods/*/regressor.py", recursive=True)]
     
-    # write run commands
-    jobs_w_results = []
-    jobs_wout_results = [] 
-    suffix = ('.json.updated'    if args.SCRIPT=='assess_symbolic_model' else
-              '_cv_results.json' if args.SCRIPT=='optimize_model' else
-              '.json')
-    queued_jobs = []
-    all_commands = []
-    job_info=[]
-    for t in range(args.START_SEED, args.START_SEED+args.N_TRIALS):
-        # random_state = np.random.randint(2**15-1)
-        if args.SEED and args.N_TRIALS==1:
-            random_state = args.SEED
-        else:
-            random_state = SEEDS[t]
-        # print('random_seed:',random_state)
+    return [
+        ("tuned" if (args.tuned or args.script == "optimize_model") else "") + ml
+        for ml in args.learners.split(",")
+    ]
+
+
+def run_no_docker(commands, n_jobs):
+    """Run all commands locally in parallel. Several processess will be spawned!"""
+
+    Parallel(n_jobs=n_jobs)(delayed(os.system)(cmd) for cmd in commands)
+
+
+def run_local(commands, job_info, args):
+    """Run experiment commands locally using Docker containers in parallel."""
+
+    print("Running locally with Docker...")
+
+    def _run(cmd, ml):
+        docker_cmd = [
+            "docker", "compose", "run", "--rm", 
+            "-v", f"{os.getcwd()}/experiment:/srbench",
+            "-v", f"{os.getcwd()}/{args.dataset_dir}:/{args.dataset_dir}",
+            "-v", f"{os.getcwd()}/{args.results_dir}:/{args.results_dir}",
+            "-v", f"{args.pretrained_dir}:/srbench_pretrained",
+            f"{ml.replace('tuned', '').lower()}",
+            "python", "-u"
+        ] + shlex.split(f"/srbench/{cmd}")
+
+        print(" ".join(docker_cmd))
+        subprocess.run(docker_cmd)
+
+    Parallel(n_jobs=args.n_jobs)(delayed(_run)(cmd, info['ml'])
+                                 for cmd, info in zip(commands, job_info))
+
+
+def run_slurm(commands, job_info, args):
+    """
+    Submit jobs to a SLURM cluster.
+
+    This function first queries the active SLURM job queue using `squeue`
+    to identify already running or pending jobs (to avoid resubmission).
+    Then, it generates and submits batch scripts for remaining jobs.
+    """
+
+    # You may need to set this
+    QUEUE = 'general'
+
+    # ----------------------------------------------------------
+    # Query existing SLURM jobs
+    # ----------------------------------------------------------
+    try:
+        print("Checking for existing SLURM jobs...")
+        res = subprocess.check_output(['squeue', '-o', '%j'], shell=True)
+        current_jobs = res.decode().split('\n')
+        current_jobs = [j.strip() for j in current_jobs if j.strip()]
+        print(f"Found {len(current_jobs)} current jobs in queue.")
+    except subprocess.CalledProcessError:
+        print("Warning: could not retrieve job list from SLURM.")
+        current_jobs = []
+
+    print('skipped', len(current_jobs),'queued jobs. Override with --noskips.')
+
+    max_jobs = args.job_limit - len(current_jobs)
+    if len(commands) > max_jobs:
+        print(f'Shaving jobs down to job limit ({args.job_limit}) minus queued jobs.')
+        commands = commands[:max_jobs]
+
+    # ----------------------------------------------------------
+    # Submit new jobs
+    # ----------------------------------------------------------
+    gpu_setting = "#SBATCH --gres=gpu:1" if 'gpu' in QUEUE else ""
+    for i, cmd in enumerate(commands):
+        job_name = f"{job_info[i]['dataset']}_{job_info[i]['ml']}_{job_info[i]['seed']}_{args.script}"
+
+        if args.y_noise>0:
+            job_name += '_target-noise'+str(args.y_noise)
+        if args.x_noise>0:
+            job_name += '_feature-noise'+str(args.x_noise)
+    
+        if job_name in current_jobs:
+            print(f"Skipping already queued job: {job_name}")
+            continue
+
+        out_file = job_info[i]["results_path"] + f"{job_name}.%J.out"
+        err_file = out_file.replace('.out', '.err')
+
+        batch_script_lines = [
+            "#!/usr/bin/bash",
+            f"#SBATCH -o {out_file}",
+            f"#SBATCH --error={err_file}",
+            f"#SBATCH -N 1 -n {args.n_jobs}",
+            f"#SBATCH -J {job_name}",
+            "#SBATCH -p QUEUE_NAME",
+            f"#SBATCH --mem-per-cpu={args.m}",
+            f"#SBATCH --ntasks-per-node=1 --time={args.job_time}:00",
+            "",
+            gpu_setting,
+            "hostname",
+            "",
+            "TZ='America/New_York'",
+            "export TZ",
+            "",
+            "timedatectl",
+            "",
+            "singularity run --no-home --contain \\",
+            f"    --bind $(pwd)/experiment:/srbench,$(pwd)/{args.dataset_dir}:/{args.dataset_dir} \\",
+            f"    --bind {args.pretrained_dir}:/srbench_pretrained/ \\",
+            f"    --bind $(pwd)/{args.results_dir}:/{args.results_dir} --fakeroot --writable-tmpfs \\",
+            f"    {args.singularity_dir}/{job_info[i]['ml']}.sif \\",
+            f"    python /srbench/{cmd}",
+            "",
+            f'echo "Job {job_name} finished."'
+        ]
+        batch_script = "\n".join(batch_script_lines)
+        with open("tmp_slurm_script.sh", "w") as f:
+            f.write(batch_script)
+
+        print(f"Submitting job: {job_name}")
+        try:
+            sbatch_response = subprocess.check_output(["sbatch", "tmp_slurm_script.sh"], shell=True).decode()
+            print(f"Submitted: {sbatch_response.strip()}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error submitting job {job_name}: {e}")
+
+
+def main():
+    args = parse_args()
+     
+    print('script:', args.script)
+    print(f"Dataset directory: {args.dataset_dir}")
+    print(f"Results directory: {args.results_dir}")
+
+    learners = detect_learners(args)
+    datasets = detect_datasets(args.dataset_dir)
+
+    print(f"Found {len(datasets)} datasets and {len(learners)} learners.")
+
+    if args.y_noise > 0: print('using target-noise', str(args.y_noise))
+    if args.x_noise > 0: print('using feature-noise', str(args.x_noise))
+
+    all_commands, job_info, jobs_w_results = [], [], []
+
+    for t in range(args.start_seed, args.start_seed + args.n_trials):
+        random_state = args.seed if args.seed and args.n_trials == 1 else SEEDS[t]
+
         for dataset in datasets:
-            if (not args.SYM_DATA 
-                and 'rethinking_feynman' in dataset
-               ):
+            dataname = os.path.basename(dataset).replace(".tsv.gz", "")
+            results_path = os.path.join(args.results_dir, dataname)
+            os.makedirs(results_path, exist_ok=True)
+
+            if (not args.sym_data and 'rethinking_feynman' in dataname):
                 continue
-            # grab regression datasets
-            metadata = load(
-                open('/'.join(dataset.split('/')[:-1])+'/metadata.yaml','r'),
-                    Loader=Loader)
-            if metadata['task'] != 'regression':
-                continue
-            
-            dataname = dataset.split('/')[-1].split('.tsv.gz')[0]
-            results_path = '/'.join([args.RDIR, dataname]) + '/'
+
             if not os.path.exists(results_path):
                 os.makedirs(results_path)
-                
+
             for ml in learners:
-                save_file = (results_path + '/' + dataname + '_' + 
-                             ml + '_' + str(random_state))
-                
-                if args.Y_NOISE > 0:
-                    save_file += '_target-noise'+str(args.Y_NOISE)
-                if args.X_NOISE > 0:
-                    save_file += '_feature-noise'+str(args.X_NOISE)
+                save_file = f"{results_path}/{dataname}_{ml}_{random_state}"
 
-                # if updated, check if json file exists (required)
-                if ('updated' in suffix 
-                    or args.SCRIPT.startswith('fix_')):
-                    if not os.path.exists(save_file+'.json'):
-                        # print("Skipping file", save_file+'.json')
-                        jobs_wout_results.append([save_file,'json result DNE'])
+                if not args.noskips:
+                    suffix = ''
+                    if args.y_noise>0:
+                        suffix += '_target-noise'+str(args.y_noise)
+                    if args.x_noise>0:
+                        suffix += '_feature-noise'+str(args.x_noise)
+                    if 'optimize' in args.script:
+                        suffix += '_cv_results'
+                    suffix += '.json'
+                        
+                    if os.path.exists(save_file+suffix):
+                        jobs_w_results.append([save_file, 'exists'])
                         continue
 
-                if not args.NOSKIPS:
-                    # check if there is already a result for this experiment
-                    if (os.path.exists(save_file+suffix) 
-                        and args.SCRIPT != 'fix_aifeynman_model_size'):
-                        jobs_w_results.append([save_file,'exists'])
-                        continue
-                    # check if there is already a queued job for this experiment
-                    job_prefix = ""
-                    if args.Y_NOISE > 0:
-                        job_prefix += '_target-noise'+str(args.Y_NOISE)
-                    if args.X_NOISE > 0:
-                        job_prefix += '_feature-noise'+str(args.X_NOISE)
-                    if save_file.split('/')[-1]+"_"+args.SCRIPT+job_prefix in current_jobs:
-                        queued_jobs.append([save_file,'queued'])
-                        continue
-                
-                # here we need to remove 'tuned' from ml name so it can properly load the algorithm
-                all_commands.append('{SCRIPT}.py '
-                                    '/{DATASET}'
-                                    ' -ml {ML}'
-                                    ' -results_path /{RDIR}'
-                                    ' -max_samples {MSAMPLE}'
-                                    ' -seed {RS} '
-                                    ' -target_noise {TN} '
-                                    ' -feature_noise {FN} '
-                                    ' -fit_time_limit {FITTIME} '
-                                    f' {"--scale_x" if args.SCALE_X else ""}'
-                                    f' {"--scale_y" if args.SCALE_Y else ""}'
-                                    f' {"--sym_data" if args.SYM_DATA else ""}'
-                                    f' {"--ecotracker" if args.ECOTRACKER else ""}'
-                                    f' {"--save_population" if args.SAVE_POP else ""}'
-                                    ' {TEST} {SYM_DATA} {SKIP_TUNE} {TUNE_MODEL}'.format(
-                                        SCRIPT=args.SCRIPT,
-                                        ML=ml.replace('tuned',''),
-                                        DATASET=dataset,
-                                        RDIR=results_path,
-                                        MSAMPLE=args.max_samples,
-                                        RS=random_state,
-                                        TN=args.Y_NOISE,
-                                        FN=args.X_NOISE,
-                                        FITTIME=args.FITTIME,
-                                        TEST=('-test' if args.TEST
-                                                else ''),
-                                        SYM_DATA=('--sym_data' if args.SYM_DATA
-                                                   else ''),
-                                        SKIP_TUNE=('--skip_tuning' if
-                                                   args.SKIP_TUNE else ''),
-                                        TUNE_MODEL=('--tuned' if
-                                                   args.TUNED else '')
-                                        )
-                                    )
-                job_info.append({'ml':ml.replace('tuned',''),
-                                 'dataset':dataname,
-                                 'seed':str(random_state),
-                                 'results_path':results_path,
-                                 'target_noise':args.Y_NOISE,
-                                 'scale_x':  args.SCALE_X,
-                                 'scale_y':  args.SCALE_Y,
-                                 'sym_data': args.SYM_DATA,
-                                 })
-                
-    max_jobs = args.JOB_LIMIT - len(current_jobs)
-    if len(all_commands) > max_jobs:
-        print(f'already has ({len(current_jobs)}) jobs in queue. shaving jobs down to job limit ({args.JOB_LIMIT}) minus queued jobs (final {max_jobs}) ')
-        all_commands = all_commands[:max_jobs]
+                # cant have 'tuned' prefix here because it will import the exact name
+                cmd = (
+                    f"{args.script}.py /{dataset} -ml {ml.replace('tuned', '')} "
+                    f"-results_path /{results_path} -seed {random_state} "
+                    f"-target_noise {args.y_noise} -feature_noise {args.x_noise} "
+                    f"-fit_time_limit {args.fit_time} -max_samples {args.max_samples} "
+                    f"{'--scale_x' if args.scale_x else ''} "
+                    f"{'--scale_y' if args.scale_y else ''} "
+                    f"{'--sym_data' if args.sym_data else ''} "
+                    f"{'--skip_tuning' if args.skip_tuning else ''} "
+                    f"{'--tuned' if args.tuned else ''}"
+                    f"{'--ecotracker' if args.ecotracker else ''} "
+                    f"{'--save_population' if args.save_population else ''} "
+                    f"{'--test' if args.test else ''} "
+                )
+                all_commands.append(cmd)
+                job_info.append({"ml": ml, "dataset": dataname, "seed": random_state, "results_path": results_path})
 
-    if not args.NOSKIPS:
-        print('skipped',len(jobs_w_results),'jobs with results. Override with --noskips.')
-        print('skipped',len(jobs_wout_results),'jobs without results. Override with --noskips.')
-        print('skipped',len(queued_jobs),'queued jobs. Override with --noskips.')
-    
-    print('submitting',len(all_commands),'jobs...')
+    print(f"Prepared {len(all_commands)} jobs...")
+
+    if not args.noskips:
+        print('skipped', len(jobs_w_results),'jobs with results. Override with --noskips.')
     
     input("Press Enter to continue")
 
-    if args.LOCAL:
-        # run locally  
-        Parallel(n_jobs=args.N_JOBS)(delayed(os.system)(run_cmd)
-                                 for run_cmd in all_commands)
-        #for run_cmd in all_commands:
-        #    print(run_cmd)
-        #    os.system(run_cmd)
+    if args.no_docker:
+        run_no_docker(all_commands, args.n_jobs)
+    if args.local:
+        run_local(all_commands, job_info, args)
+    elif args.slurm:
+        run_slurm(all_commands, job_info, args)
     else:
-        # sbatch
-        for i,run_cmd in enumerate(all_commands):
-            job_name = '_'.join([
-                                 job_info[i]['dataset'],
-                                 ('tuned' if (args.TUNED or args.SCRIPT=='optimize_model') else '') + job_info[i]['ml'],
-                                 job_info[i]['seed'],
-                                 args.SCRIPT
-                                ])
-            if args.Y_NOISE>0:
-                job_name += '_target-noise'+str(args.Y_NOISE)
-            if args.X_NOISE>0:
-                job_name += '_feature-noise'+str(args.X_NOISE)
-            out_file = (job_info[i]['results_path']
-                        + job_name 
-                        + '.%J.out')
-            error_file = out_file[:-4] + '.err'
-            
-            if args.SLURM:
-                    batch_script = \
-"""#!/usr/bin/bash 
-#SBATCH -o {OUT_FILE} 
-#SBATCH --error={ERR_FILE} 
-#SBATCH -N 1 
-#SBATCH -n {N_CORES} 
-#SBATCH -J {JOB_NAME} 
-#SBATCH -p {QUEUE} 
-#SBATCH --ntasks-per-node=1 --time={TIME}:00 
-#SBATCH --mem-per-cpu={M} 
-{GPU_SETTING}
-hostname
+        print("Specify either --local or --slurm to execute jobs.")
 
-TZ='America/New_York'
-export TZ
+    print("Finished submitting jobs.")
 
-timedatectl
 
-echo 'singularity run --no-home --contain \'
-echo ' --bind $(pwd)/experiment:/srbench,$(pwd)/{DATASET_DIR}:/{DATASET_DIR} \'
-echo ' --bind ${PRETRAINED_DIR}:/srbench_pretrained/ \'
-echo ' --bind $(pwd)/{RDIR}:/{RDIR} --fakeroot --writable-tmpfs \'
-echo ' {SDIR}{ML_SIF}.sif \'
-echo ' python /srbench/{cmd}'
-
-date +%Y-%m-%d_%H-%M-%S
-
-echo '--------------------------------------------------------'
-
-singularity run --no-home --contain \
-    --bind $(pwd)/experiment:/srbench,$(pwd)/{DATASET_DIR}:/{DATASET_DIR} \
-    --bind {PRETRAINED_DIR}:/srbench_pretrained/ \
-    --bind $(pwd)/{RDIR}:/{RDIR} --fakeroot --writable-tmpfs \
-    {SDIR}{ML_SIF}.sif \
-    python /srbench/{cmd} 
-""".format(
-           OUT_FILE=out_file,
-           ERR_FILE=error_file,
-           JOB_NAME=job_name,
-           QUEUE=args.QUEUE,
-           PRETRAINED_DIR=args.PRETRAINED_DIR,
-           GPU_SETTING=("#SBATCH --gres=gpu:1" if 'gpu' in args.QUEUE else ""),
-           A=args.A,
-           SDIR=args.SDIR,
-           ML=job_info[i]['ml'],
-           N_CORES=args.N_JOBS,
-           M=args.M,
-           ML_SIF=('geneticengine' if 'geneticengine' in job_info[i]['ml']  \
-                                   else 'afp' if 'afp_' in job_info[i]['ml'] \
-                                   else 'sklearn' if 'sklearn_' in job_info[i]['ml'] \
-                                   else job_info[i]['ml']),
-           cmd=run_cmd,
-           DATASET_DIR=args.DATASET_DIR,
-           RDIR=args.RDIR,
-           TIME=args.TIME
-          )
-                    with open('tmp_script','w') as f:
-                        f.write(batch_script)
-
-                    # print(batch_script)
-                    print(job_name)
-                    sbatch_response = subprocess.check_output(['sbatch tmp_script'],
-                                                              shell=True).decode()     # submit jobs 
-                    print(sbatch_response)
-
-            else: # LPC
-                # activate srbench env, load modules
-                # pre_run_cmds = ["conda activate srbench",
-                #                 "source lpc_modules.sh"]
-                # run_cmd = '; '.join(pre_run_cmds + [run_cmd])
-                bsub_cmd = ('bsub -o {OUT_FILE} '
-                            '-e {ERR_FILE} '
-                            '-n {N_CORES} '
-                            '-J {JOB_NAME} '
-                            '-q {QUEUE} '
-                            '-R "span[hosts=1] rusage[mem={M}]" '
-                            '-W {TIME} '
-                            '-M {M} ').format(
-                                   OUT_FILE=out_file,
-                                   ERR_FILE=error_file,
-                                   JOB_NAME=job_name,
-                                   QUEUE=args.QUEUE,
-                                   N_CORES=args.N_JOBS,
-                                   M=args.M,
-                                   TIME=args.TIME
-                                   )
-                
-                bsub_cmd +=  '"' + run_cmd + '"'
-                print(bsub_cmd)
-                os.system(bsub_cmd)     # submit jobs 
-
-    print('Finished submitting',len(all_commands),'jobs.')
+if __name__ == '__main__':
+    main()
