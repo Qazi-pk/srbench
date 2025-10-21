@@ -39,7 +39,11 @@ for category_name, dataset_list in dataset_categories.items():
         # Write metadata.yml file
         metadata = {
             "name": dataset_name,
+<<<<<<< HEAD
             "task": "regression",
+=======
+            "task": "regression" if dataset_name in regression_dataset_names else "classification",
+>>>>>>> 5867b0068e8f005c07ea9083e2c46078edede7dc
             "n_instances": dataset.shape[0],
             "n_features": dataset.shape[1]
         }

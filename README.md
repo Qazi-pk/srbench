@@ -64,7 +64,7 @@ Once you get all the results, you nee to collate the results using the `collate`
 
 > **A paper containing the results from this repository is under review at GECCO 2025 Symbolic Regression Workshop.**
 
-A [Call for action]() was reported in the GECCO 2025 paper:
+A _Call for action_ was reported in the GECCO 2025 paper:
 
 > Imai Aldeia, G. S., Zhang, H., Bomarito, G., Cranmer, M., Fonseca, A., Burlacu, B., La Cava, W., and de França, F. 2025. Call for Action: towards the next generation of symbolic regression benchmark. _Proceedings of the Genetic and Evolutionary Computation Conference Companion_
 [doi](https://dl.acm.org/doi/10.1145/3712255.3734309),

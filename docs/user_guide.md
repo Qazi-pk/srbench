@@ -9,7 +9,7 @@ should check out the [v2.0 release](https://github.com/cavalab/srbench/releases/
 
 ### Local install
 
-We have provided a [conda environment](environment.yml), [configuration script](configure.sh) and [installation script](install.sh) that should make installation straightforward.
+We have provided a [conda environment](../base_environment.yml) that should make installation easier.
 We've currently tested this on Ubuntu and CentOS. 
 Steps:
 
@@ -20,11 +20,11 @@ conda install -n base conda-libmamba-solver
 conda config --set solver libmamba
 ```
 
-1. Install the conda environment:
+1. Install the base conda environment. This will set up a python installation with some basic things needed to submit jobs and analyze the results:
 
 ```bash
-conda env create -n srbench-base -f base_environment.yml
-conda activate srbench-base
+conda env create -f base_environment.yml
+conda activate srbench
 ```
 
 2. Pull the benchmark algorithm images with
@@ -45,47 +45,40 @@ python download_data.py
 **NOTE**: these instructions are for the the [v2.0 release](https://github.com/cavalab/srbench/releases/tag/v2.0) version of this repo.  
 
 Experiments are launched from the `experiments/` folder via the script `analyze.py`.
-The script can be configured to run the experiment in parallel locally, on an LSF job scheduler, or on a SLURM job scheduler. 
-To see the full set of options, run `python analyze.py -h`. 
+The script can be configured to run the experiment in parallel locally, or on a SLURM job scheduler. 
+To see the full set of options, run `python analyze.py --help`, or check out the [source code](../experiment/analyze.py). 
 
 **WARNING**: running some of the commands below will submit tens of thousands of experiments. 
 Use accordingly. 
 
 ### Black-box experiment
 
-After installing and configuring the conda environment, the complete black-box experiment can be started via the command:
+After installing and configuring the conda environment, the complete black-box experiment was executed in a SLURM cluster via the command below executed from the root of the repository:
 
 ```bash
 ################################################################################
 # 1. Black-box experiments - with gridsearch for each dataset-run
 ################################################################################
 
-# submit the ground-truth dataset experiment. 
+# Define algorithm groups
 cpu_ml="afp,afp_fe,afp_ehc,bingo,brush,bsr,eplex,eql,feat,ffx,geneticengine,gpgomea,gplearn,gpzgd,itea,operon,ps-tree,pysr,qlattice,rils-rols,tir"
+gpu_ml="e2et,nesymres,tpsr,udsr"  # Pretrained models or checkpoints for NN-based methods
 
-# pretrained models or checkpoints for NN based methods.
-gpu_ml="e2et,nesymres,tpsr,udsr"
-
-# This will submig the jobs
-python experiment/analyze.py datasets/blackbox/ \
+# Common experiment parameters
+COMMON_ARGS="datasets/blackbox/ \
     -script optimize_model \
     -results results_blackbox_tuning/ \
     -images /path-to-your-images/ \
     -pretrained_dir /path-to-pretrained-model-checkpoints/ \
     -n_trials 30 -job_time_limit 8:00 -fit_time_limit 3600 \
     -m 10000 -max_samples 40000 \
-    --scale_x --scale_y --slurm --ecotracker \
-    -ml $cpu_ml
+    --scale_x --scale_y --slurm --ecotracker"
 
-python experiment/analyze.py datasets/blackbox/ \
-    -script optimize_model \
-    -results results_blackbox_tuning/ \
-    -images /path-to-your-images/ \
-    -pretrained_dir /path-to-pretrained-model-checkpoints/ \
-    -n_trials 30 -job_time_limit 8:00 -fit_time_limit 3600 \
-    -m 10000 -max_samples 40000 \
-    --scale_x --scale_y --slurm --ecotracker \
-    -ml $gpu_ml
+# Submit jobs for CPU-based algorithms
+python experiment/analyze.py $COMMON_ARGS -ml $cpu_ml
+
+# Submit jobs for GPU-based algorithms
+python experiment/analyze.py $COMMON_ARGS -ml $gpu_ml
 ```
 
 After running the experiments, you can glue them with:
@@ -97,6 +90,14 @@ python postprocessing/scripts/collate_experiments_results.py './results_blackbox
 # Glue eco2ai with
 python postprocessing/scripts/collate_blackbox_eco2ai_stats.py './results_blackbox_tuning/' './results/black-box-tuning/'
 ```
+
+Alternativelly, you can run jobs locally, using Docker images instead of Singularity images. For example:
+
+```bash
+python experiment/analyze.py datasets/blackbox/     -script optimize_model     -results results_blackbox_tuning/     -images /path-to-your-images/     -pretrained_dir /path-to-pretrained-model-checkpoints/     -ml feat     -n_trials 1     -job_time_limit 8:00     -fit_time_limit 3600     -m 10000     -max_samples 40000     --scale_x --scale_y --local --ecotracker
+```
+
+The experiments are designed to run either with Docker locally or Singularity on a cluster. You may be able to bypass it by creating a conda environment with your code installed and passing `--no_docker` as argument. Make sure your custom environment is compatible with all dependencies. 
 
 ### First-principles experiment
 
@@ -170,7 +171,7 @@ Pull the image with `singularity pull folder/name.sif docker://user_id/image`. I
 
 ### Post-processing
 
-Navigate to the [postprocessing](postprocessing) folder to begin postprocessing the experiment results. 
+Navigate to the `postprocessing` folder to begin postprocessing the experiment results. 
 The following two scripts collate the `.json` files into two `.feather` files to share results more easily. 
 You will notice these `.feather` files are loaded to generate figures in the notebooks. 
 They also perform some cleanup like shortening algorithm names, etc.
@@ -182,10 +183,10 @@ python collate_groundtruth_results.py
 
 **Visualization**
 
-- [groundtruth_results.ipynb](postprocessing/groundtruth_results.ipynb): ground-truth results comparisons
-- [blackbox_results.ipynb](postprocessing/blackbox_results.ipynb): ground-truth results comparisons
-- [statistical_comparisons.ipynb](postprocessing/statistical_comparisons.ipynb): post-hoc statistical comparisons
-- [pmlb_plots](postprocessing/pmlb_plots.ipynb): the [PMLB](https://github.com/EpistasisLab/pmlb) datasets visualization 
+- [groundtruth_results.ipynb](../postprocessing/groundtruth_results.ipynb): ground-truth results comparisons
+- [blackbox_results.ipynb](../postprocessing/blackbox_results.ipynb): ground-truth results comparisons
+- [statistical_comparisons.ipynb](../postprocessing/statistical_comparisons.ipynb): post-hoc statistical comparisons
+- [pmlb_plots](../postprocessing/pmlb_plots.ipynb): the [PMLB](https://github.com/EpistasisLab/pmlb) datasets visualization 
 
 
 ## Using your own datasets

@@ -142,5 +142,10 @@ avg_ranks['model_size_avg_rank'] = df_sum.groupby('algorithm')['model_size_rank'
 
 print("\nAverage ranks across datasets:")
 print(avg_ranks.sort_values('r2_test_avg_rank'))
+
+# Save results
+df_sum.to_csv(f'{sdir}/results-summary.csv.gz', compression='gzip', index=False)
+df_results.to_feather(f'{sdir}/results.feather')
+
 print(f'Summary saved to {sdir}/results-summary.csv.gz')
 print(f'Results saved to {sdir}/results.feather')

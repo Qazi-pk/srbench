@@ -4,13 +4,14 @@ channels:
 dependencies:
   - scikit-learn 
   - pandas 
+  - pyarrow
   - numpy
   - pytest
   - sympy
   - pyyaml
   - pip 
   - pip:
-    - pmlb @ git+https://github.com/EpistasisLab/pmlb
+    - git+https://github.com/EpistasisLab/pmlb
     - pytest-order
     - eco2ai
     - tabulate
