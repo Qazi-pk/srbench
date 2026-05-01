@@ -11,6 +11,7 @@ RUN apt update && apt install -y \
     liblapack-dev \
     libgsl-dev \
     ghc \
+    procps \
     cabal-install \
     pkg-config \
     && \
