@@ -13,6 +13,11 @@ EOF
 
 algorithms=$(ls algorithms/)
 
+# To focus on specific algorithms
+# algorithms=(
+#     ffx
+# )
+
 for alg in ${algorithms[@]} ; do
     echo "Processing algorithm: ${alg}"
     
