@@ -22,7 +22,7 @@ USER $MAMBA_USER
 ARG ALGORITHM
 ENV ALGORITHM="tir"
 WORKDIR "/install"
-COPY --chown=$MAMBA_USER:$MAMBA_USER base_environment.yml install_algorithm.sh .
+COPY --chown=$MAMBA_USER:$MAMBA_USER base_environment.yml scripts/install_algorithm.sh .
 COPY --chown=$MAMBA_USER:$MAMBA_USER ./algorithms/${ALGORITHM} ./${ALGORITHM}
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 RUN bash install_algorithm.sh $ALGORITHM \
