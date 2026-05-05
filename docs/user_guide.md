@@ -33,6 +33,8 @@ conda activate srbench
 docker build --pull --rm -f "Dockerfile" -t srbench:latest "."
 ```
 
+This docker build typically takes about 10 minutes.
+
 3. Download the PMLB datasets:
 
 ```bash
@@ -80,6 +82,8 @@ python experiment/analyze.py $COMMON_ARGS -ml $cpu_ml
 # Submit jobs for GPU-based algorithms
 python experiment/analyze.py $COMMON_ARGS -ml $gpu_ml
 ```
+
+Pretrained weights: see the official repos for links. NeSymRes: https://github.com/SymposiumOrganization/NeuralSymbolicRegressionThatScales, TPSR (links to E2E/NeSymRes): https://github.com/deep-symbolic-mathematics/tpsr. As of 2026-05-05, E2E (https://github.com/facebookresearch/symbolicregression) and uDSR (https://github.com/dso-org/deep-symbolic-optimization) do not list weights in their README.
 
 After running the experiments, you can glue them with:
 
@@ -141,6 +145,8 @@ When a new algorithm is submitted to SRBench, a GitHub workflow will generate a 
 To build the docker images locally, first run `bash scripts/make_docker_compose_file.sh` in the root directory to create a `docker-compose.yml` file describing all images that will be created.
 Then `docker compose up` should create all the images.
 Instead of creating all images, you can build the image of a specific algorithm with the name of the service (_e.g._ `docker compose build feat`). 
+
+Note: `docker compose up` pulls images from Docker Hub, while `docker compose build` builds them locally (at your own risk).
 
 The file `alg-Dockerfile` specifies the steps used to install the algorithm - you can check it out to see how it will be installed. 
 The build relies on `scripts/install_algorithm.sh`, so do not delete this file.
