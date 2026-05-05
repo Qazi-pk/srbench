@@ -143,7 +143,7 @@ Then `docker compose up` should create all the images.
 Instead of creating all images, you can build the image of a specific algorithm with the name of the service (_e.g._ `docker compose build feat`). 
 
 The file `alg-Dockerfile` specifies the steps used to install the algorithm - you can check it out to see how it will be installed. 
-The build relies on `install_algorithm.sh`, so do not delete this file.
+The build relies on `scripts/install_algorithm.sh`, so do not delete this file.
 
 You can now submit arbitrary python commands to the image, _e.g._ `docker compose run feat bash test.sh`. This command will run the test script to check if the algorithm is compatible.
 
