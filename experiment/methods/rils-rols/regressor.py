@@ -4,9 +4,24 @@ from sklearn.base import BaseEstimator, RegressorMixin
 import sympy as sp
 
 eval_kwargs = {'scale_x': False, 'scale_y': False}
-# This is a setup for ground-truth instances (feynman and strogatz), for black-box just change max fit calls to 500k, i.e., max_fit_calls=500*1000,
-# if there is still that requirement (as in paper), otherwise keep 1 million. 
-est:RegressorMixin = RILSROLSRegressor(max_time=2*60*60, max_fit_calls=1000*1000, max_complexity=50, sample_size=0, verbose=True)
+
+complexity_penalty = [0.001, 0.01, 0.1]
+max_complexity     = [25, 50, 100]
+
+hyper_params = []
+for c in complexity_penalty:
+    for max_c in max_complexity:
+        hyper_params.append({
+            'complexity_penalty' : [c],
+            'max_complexity' : [max_c],
+        })
+
+est:RegressorMixin = RILSROLSRegressor(
+    max_time=60*60,
+    max_fit_calls=1000*1000,
+    max_complexity=50,
+    sample_size=0,
+    verbose=False)
 
 def model(est, X=None) -> str:
     if X is None:

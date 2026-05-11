@@ -192,6 +192,10 @@ def model(est, X=None):
     return est.model
 
 
+def complexity(est):
+    return est.best_estimator.stats_['model_complexity']
+
+
 def get_best_solution(est):
     return [est] if isinstance(est, SympyExprModel) else est.best_solution
 

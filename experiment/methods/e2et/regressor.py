@@ -6,7 +6,7 @@ import numexpr
 
 model_path = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "model.pt" 
+    "/pretrained/model.pt" 
 )
 try:
     if not os.path.isfile(model_path): 

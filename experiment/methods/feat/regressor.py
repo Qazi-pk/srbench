@@ -141,6 +141,13 @@ def model(est, X=None) -> str:
     return model_str
 
 
+def complexity(est):
+    if isinstance(est, FeatPopEstimator):
+        est = est.est # It is wrapped
+
+    return est.get_n_nodes() + 2*est.get_n_params() + 2*est.get_dim()
+
+
 def get_population(est) -> list[RegressorMixin]:
     """
     Return the final population of the model. This final population should

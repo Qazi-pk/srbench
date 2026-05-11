@@ -43,6 +43,12 @@ def complexity(est):
     return len(est.best_estimator_)
 
 def model(est, X=None):
-    return est.stack_2_eqn(est.best_estimator_)
+    model_str = est.stack_2_eqn(est.best_estimator_)
+
+    # protected sqrt uses |cdot|. removing it
+    model_str = model_str.replace('|','')
+
+    return model_str
+
 
 eval_kwargs = dict(use_dataframe=False)
