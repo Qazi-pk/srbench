@@ -5,10 +5,11 @@ dependencies:
   - scikit-learn 
   - pandas 
   - numpy
+  - pyarrow
   - pytest
   - sympy
   - pyyaml
   - pip 
   - pip:
-    - pmlb==1.0.1.post3
+    - git+https://github.com/EpistasisLab/pmlb # mislabeled datasets fixed
     - pytest-order

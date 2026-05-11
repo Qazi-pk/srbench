@@ -7,7 +7,9 @@ should check out the [v2.0 release](https://github.com/cavalab/srbench/releases/
 
 ### Local install
 
-We have provided a [conda environment](environment.yml), [configuration script](configure.sh) and [installation script](install.sh) that should make installation straightforward.
+We have provided a [conda environment](../base_environment.yml), [configuration script](configure.sh), and [installation script](../scripts/install_algorithm.sh) that should make installation straightforward.
+The installation script is the same used internally when building the docker images.
+
 We've currently tested this on Ubuntu and CentOS. 
 Steps:
 
@@ -18,18 +20,22 @@ conda install -n base conda-libmamba-solver
 conda config --set solver libmamba
 ```
 
-1. Install the conda environment:
+1. Install the conda environment naming it `srbench`:
 
 ```bash
-conda env create -f environment.yml
+conda env create -f environment.yml -n srbench
 conda activate srbench
 ```
 
-2. Install the benchmark algorithms:
+2. Install a benchmark algorithm:
+
+The `scripts/install_algorithm.sh` script installs a single algorithm by name. For example, to install gplearn:
 
 ```bash
-bash install.sh
+bash scripts/install_algorithm.sh gplearn
 ```
+
+Replace `gplearn` with the name of any algorithm directory in `algorithms/` to install it into the srbench conda environment.
 
 3. Download the PMLB datasets:
 
@@ -41,9 +47,25 @@ git lfs pull
 
 ### Docker install
 
-For Docker users,
+For Docker users, you can build the algorithm images using docker-compose:
+
 ```bash
-docker build --pull --rm -f "Dockerfile" -t srbench:latest "."
+bash scripts/make_docker_compose_file.sh
+docker compose up
+```
+
+This generates a `docker-compose.yml` file and pulls all algorithm images locally. To build images locally see [instructions for docker users](#for-docker-users).
+
+To build a specific algorithm image:
+
+```bash
+docker compose build feat
+```
+
+To run a command in a container:
+
+```bash
+docker compose run feat bash test.sh
 ```
 
 ## Reproducing the benchmark results
@@ -122,11 +144,14 @@ done
 
 When a new algorithm is submitted to SRBench, a GitHub workflow will generate a docker image and push it to [Docker Hub](hub.docker.com). Ths means that you can also easily pull the images, without having to deal with local installations.
 
-To use docker, you first run `bash scripts/make_docker_compose_file.sh` in the root directory. Then `docker compose up` should create the images.
+To build the docker images locally, first run `bash scripts/make_docker_compose_file.sh` in the root directory to create a `docker-compose.yml` file describing all images that will be created.
+Then `docker compose up` should create all the images.
+Instead of creating all images, you can build the image of a specific algorithm with the name of the service (_e.g._ `docker compose build feat`). 
 
-You can now submit arbitrary python commands to the image, _e.g._ `docker compose run feat bash test.sh`
+Note: `docker compose up` pulls images from Docker Hub, while `docker compose build` builds them locally.
 
-Or you can enter bash mode using an image with `docker compose run feat bash`
+The file `alg-Dockerfile` specifies the steps used to install the algorithm - you can check it out to see how it will be installed. 
+The build relies on `scripts/install_algorithm.sh`, so do not delete this file.
 
 ### Post-processing
 
