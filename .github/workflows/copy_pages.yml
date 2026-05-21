@@ -14,9 +14,12 @@ jobs:
   copy:
     name: Copy files to gh-pages
     runs-on: ubuntu-latest
+    concurrency:
+      group: copy-pages-${{ github.ref }}
+      cancel-in-progress: false
     strategy:
       matrix:
-        file: 
+        file:
           - CONTRIBUTING.md
           - README.md
           - docs/CompetitionGuide.md
@@ -27,14 +30,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - 
-        name: check cache 
+      -
+        name: check cache
         uses: actions/cache@v4
         with:
           path: ${{ matrix.file }}
           key: ${{ hashFiles(format('{0}', matrix.file )) }}
         id: cache
-      - 
+      -
         name: copy to gh-pages
         if: steps.cache.outputs.cache-hit != 'true'
         env:
@@ -46,4 +49,4 @@ jobs:
             SRC_DIR="docs/"
             SRC_FILE=${SRC_FILE#"docs/"}
           fi
-          source ci/copy_page.sh 
+          source ci/copy_page.sh
