@@ -19,6 +19,10 @@ def test_evaluate_model(ml):
                                    ['est','hyper_params','complexity'])
 
     print('algorithm imported:',algorithm)
+    eval_kwargs = {}
+    if 'eval_kwargs' in dir(algorithm):
+        eval_kwargs = algorithm.eval_kwargs
+
     evaluate_model(
         dataset=dataset, 
         results_path=results_path, 
@@ -27,5 +31,6 @@ def test_evaluate_model(ml):
         est=algorithm.est,
         model=algorithm.model,
         algorithm=algorithm,
-        test=True # testing
+        test=True, # testing
+        **eval_kwargs
     )

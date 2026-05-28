@@ -47,7 +47,11 @@ def evaluate_model(
     target_noise=0.0,
     feature_noise=0.0,
     fit_time_limit=3600,
-    sym_data=False,    save_pop=False,
+
+    ##########
+    # valid options for eval_kwargs
+    ##########
+    sym_data=False,
     test_params={},
     max_train_samples=0,
     scale_x=True,
@@ -61,15 +65,6 @@ def evaluate_model(
     np.random.seed(random_state)
     if hasattr(est, 'random_state'):
         est.random_state = random_state
-
-    if (
-        "e2et" in est_name
-        or "tpsr" in est_name
-        or "nesymres" in est_name
-        or "dso" in est_name
-        or "bingo" in est_name
-    ):
-        use_dataframe = False
 
     features, labels, feature_names = read_file(
         dataset, 
@@ -150,8 +145,8 @@ def evaluate_model(
     ################################################## 
     # Fit models
     ################################################## 
-    if test and fit_time_limit > 60:
-        fit_time_limit = 60
+    if test and fit_time_limit > 360: # lets give them 6 minutes
+        fit_time_limit = 360
 
     MAXTIME = fit_time_limit
     if len(y_train) > 1000 and not test and MAXTIME < 36000:
@@ -185,7 +180,7 @@ def evaluate_model(
         print('max time not set. Program will be killed if execution takes too long')
 
     signal.signal(signal.SIGALRM, alarm_handler)
-    alarm_grace = 60 if test else 600
+    alarm_grace = 360 if test else 600
     signal.alarm(MAXTIME + alarm_grace)
 
     t0t = time.time()

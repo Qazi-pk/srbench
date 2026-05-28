@@ -234,6 +234,9 @@ est = uDSRRegressor()
 def model(est, X=None): # Should work for both methods
     # clean_pred_model from assess_symbolic model has fixes to the string rep
     return str(est.program_.sympy_expr)
+
+# define eval_kwargs.
+eval_kwargs = dict(use_dataframe=False)
     
 
 if __name__ == "__main__":

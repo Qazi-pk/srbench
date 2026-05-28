@@ -5,8 +5,11 @@ from bingo.symbolic_regression.srbench_interface import (
     model,
     get_population,
     get_best_solution,
-    eval_kwargs,
+    eval_kwargs as base_eval_kwargs,
 )
+
+eval_kwargs = dict(base_eval_kwargs)
+eval_kwargs["use_dataframe"] = False
 
 # sklearn's interface should not modify constructor parameters. Bingo modifies
 # max_time, so here I'm wrapping it into an sklearn-compatible estimator 

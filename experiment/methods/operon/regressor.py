@@ -244,5 +244,6 @@ def pre_train_fn(est, X, y):
 # pass the function to eval_kwargs
 eval_kwargs = {
     'pre_train': pre_train_fn,
-    'test_params': {'max_time': 60 }
+    'test_params': {'max_time': 60 },
+    'use_dataframe' : False,
 }

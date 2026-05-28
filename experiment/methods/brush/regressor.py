@@ -4,21 +4,7 @@ from sklearn.metrics import r2_score
 from sklearn.base import BaseEstimator, RegressorMixin
 import re
 import numpy as np
-
-bandit     = ["dynamic_thompson", "thompson"]
-max_depth  = [5, 7, 9]
-objectives = [['scorer', 'complexity'], ['scorer', 'linear_complexity']]
-
-hyper_params = []
-# The estimator is generating a segfault when using gridsearch. Skipping
-# for b, d in zip(bandit, max_depth):
-#     for o in objectives:
-#         hyper_params.append({
-#                 'bandit'     : [b],
-#                 'max_depth'  : [d],
-#                 'objectives' : [o]
-#                 })
-        
+     
 kwargs = {
     'verbosity'       : 1,
     'pop_size'        : 250, 
@@ -94,51 +80,6 @@ func_arity = { # remember to add here the functions used in the experiments
 }
 
 
-class BrushPopEstimator(RegressorMixin):
-    """
-    BrushPopEstimator is a custom regressor that wraps a fitted Brush estimator
-    to call `model` and `predict` from its archive.
-    
-    Attributes:
-        est (object): The fitted Brush estimator.
-        id (int): The identifier for the specific model in the estimator's archive.
-    Methods:
-        __init__(est, id):
-            Initializes the BrushPopEstimator with a fitted Brush estimator
-            and a model ID.
-        fit(X, y):
-            Dummy fit method to set the estimator as fitted.
-        predict(X):
-            Prepares the input data and predicts the output using the
-            model from the estimator's archive.
-        score(X, y):
-            Computes the R^2 score of the prediction.
-        model():
-            Retrieves the model equation from the estimator's archive.
-    """
-    def __init__(self, est, id):
-        self.est = est
-        self.id  = id
-
-    def fit(self, X, y):
-        self.is_fitted_ = True
-
-    def predict(self, X):
-        preds = self.est.predict_archive(X)
-        ind = [i for i in preds if i['id']==self.id][0]
-        return ind['y_pred']
-
-    def score(self, X, y):
-        yhat = self.predict(X).flatten()
-        return r2_score(y,yhat)
-    
-    def model(self):
-        archive = self.est.archive_
-        ind = [i for i in archive if i['id']==self.id][0]
-        loaded = individual.ClassifierIndividual.from_json(ind)
-        return loaded.get_model()
-    
-
 def pretify_expr(string, feature_names):
     # Breaking down into a list of symbols. replace 8 with % to capture weight multiplication
     # (these are already in infix notation)
@@ -200,26 +141,3 @@ def complexity(est):
     ind = [i for i in est.est.archive_ if i['id']==est.id][0]
     return ind['fitness']['size']
 
-
-def get_best_solution(est):
-    return est
-
-
-def get_population(est):
-    print("population size:", len(est.population_))
-    print("archive size   :", len(est.archive_))
-
-    archive = est.archive_
-
-    pop = []
-    for ind in archive:
-        # Archive is sorted by complexity
-        pop.append(
-            BrushPopEstimator(est, ind['id'])
-        )
-
-        # Stopping here to avoid too many models
-        if len(pop) >= 100:
-            break
-
-    return pop

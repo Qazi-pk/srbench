@@ -27,6 +27,7 @@ est=lightgbm.LGBMRegressor(
                           )
 
 def complexity(est):
-    return np.sum([x['num_leaves'] for x in est._Booster.dump_model()['tree_info']])
+    c = np.sum([x['num_leaves'] for x in est._Booster.dump_model()['tree_info']])
+    return int(c)
 
 model = None

@@ -362,3 +362,6 @@ def model(est, X=None):
 
 
 #  python regressor.py
+
+# define eval_kwargs.
+eval_kwargs = dict(use_dataframe=False)

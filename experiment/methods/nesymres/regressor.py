@@ -518,3 +518,6 @@ est = NeSymResRegressor()
 
 def model(est, X=None):
     return str(est.model_eq_[0])
+
+# define eval_kwargs.
+eval_kwargs = dict(use_dataframe=False)

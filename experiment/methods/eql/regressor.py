@@ -8,10 +8,10 @@ base = EQL(n_iter=10_000)
 
 reg = (1e-4, 1e-3, 1e-2, 5e-2)
 n_layers = (1, 2)
-functions = (
+functions = [
     "id;mul;cos;sin;exp;square;sqrt;id;mul;cos;sin;exp;square;sqrt;log",
-    "id;mul;cos;div;sqrt;cos;sin;div;mul;mul;cos;id;log",
-)
+    "id;mul;cos;div;sqrt;cos;sin;div;mul;mul;cos;id;log"
+]
 
 hyper_params = []
 
@@ -37,6 +37,6 @@ def model(est, X=None):
 
 
 eval_kwargs = {
-    'test_params': {'param_grid': {'n_iter': [10], **hyper_params[-1]}},
+    # 'test_params': {'n_iter': [10], **hyper_params[-1]},
     'use_dataframe':False
 }
