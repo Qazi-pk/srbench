@@ -9,31 +9,15 @@ expects:
     model(est, X=None)  returns a sympy-parseable string for the fitted model
     eval_kwargs         method-specific args forwarded to evaluate_model.py
 
-No JEPA, no flow prior, no OT loss. Vanilla classical PIR only -- this is the
-configuration that produced the archived blind Tier A baseline (13/44 stable,
-~29.5% mean over 5 seeds, results_tierA_blind/).
+ No flow prior, no OT loss. Vanilla classical PIR only -- this is the
+configuration that produced the verified blind Tier A baseline:
 
-=============================================================================
-THREE THINGS YOU MUST CONFIRM BEFORE OPENING THE PR  (do not skip these)
------------------------------------------------------------------------------
-[1] PUBLIC ENGINE URL. SRBench CI cannot pull a private repo. Set the repo
-    URL + ref in install.sh. The import below must resolve from that public
-    package.
+    12/44 EXACT  (zero seed wobble, v3.4)
+    +12/44 FORM_NUMERIC secondary (correct functional form, transcendental
+                constant folded as decimal -- reported separately, never summed)
 
-[2] CONFIG MUST MATCH THE ARCHIVED BASELINE. The kwargs in _PIR_VANILLA_CONFIG
-    below must be byte-for-byte the configuration used by sweep_tierA_blind.py
-    that produced results_tierA_blind/. Otherwise the submitted number won't be
-    the number you archived -- an integrity gap. Open sweep_tierA_blind.py and
-    copy the exact PIRRegressor(...) kwargs here. The values below are
-    placeholders based on the handoff (use_ot_loss=False, max_train_rows=800)
-    and are NOT yet verified against the sweep script.
-
-[3] VARIABLE NAMES. model() must return a string whose symbols match the
-    SRBench dataset's column names (X.columns), NOT your local feynman_loader
-    names. SRBench/PMLB Feynman columns may differ from ~/feynman_data/. Run the
-    smoke test in SUBMISSION_NOTES.md against one real SRBench dataset and
-    confirm the returned symbols match before trusting CI.
-=============================================================================
+Engine: https://github.com/Qazi-pk/physics-engine (MIT, tag v3.4.1)
+Paper:  https://doi.org/10.5281/zenodo.19723561
 """
 
 import signal
