@@ -18,7 +18,7 @@ that produced the verified blind Tier A baseline:
                 constant folded as decimal — reported separately, never summed)
 
 Engine: https://github.com/Qazi-pk/physics-engine (MIT, tag v3.4.1)
-Paper:  https://doi.org/10.5281/zenodo.21231641
+Paper: https://doi.org/10.5281/zenodo.21351039
 """
 
 import re
