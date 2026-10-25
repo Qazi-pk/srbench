@@ -16,4 +16,6 @@ description: >
   complexity penalty. Since pir-engine 3.6.0, fallback gates run after the
   engine when its model is not exact: an exact rational-function gate (P/Q),
   an exact exponential gate, and a noise-tolerant power-law gate with exponents
-  snapped to simple fractions. Software DOI: 10.5281/zenodo.23460311.
+  snapped to simple fractions. Since 3.7.0, a safeguard returns a ridge-linear
+  model (or the mean) instead when the formula fits clearly worse than that
+  baseline under cross-validation. Software DOI: 10.5281/zenodo.23631107.

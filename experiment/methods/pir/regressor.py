@@ -23,8 +23,14 @@ already exact:
 A gate's model replaces the engine's only when it passes its test; any error
 inside a gate keeps the engine's model. Thresholds are fixed in the engine.
 
-Engine: https://github.com/Qazi-pk/physics-engine (MIT, tag v3.6.0)
-Software DOI: https://doi.org/10.5281/zenodo.23460311
+Since pir-engine 3.7.0, a safeguard (safeguard=True) then compares the final
+formula with a ridge-regression linear model and the mean of y: a formula with
+training R^2 >= 0.999 is always kept; otherwise the linear model replaces it
+only if its 5-fold cross-validated R^2 is higher by more than 0.05, and the
+mean is returned if both are below 0. Rules are fixed in the engine.
+
+Engine: https://github.com/Qazi-pk/physics-engine (MIT, tag v3.7.0)
+Software DOI: https://doi.org/10.5281/zenodo.23631107
 Paper: https://doi.org/10.5281/zenodo.21351039
 """
 
@@ -33,7 +39,7 @@ import re
 import numpy as np
 
 # The classical engine. algorithms/pir/install.sh pip-installs this from the
-# public repo at tag v3.6.0.
+# public repo at tag v3.7.0.
 from physics_engine.sklearn_adapter import PIRRegressor
 from sklearn.base import BaseEstimator, RegressorMixin
 
@@ -60,18 +66,27 @@ class PIRClassicRegressor(BaseEstimator, RegressorMixin):
     SRBench's own timeout handler (per gAldeia's review on PR #210). The
     `max_time` constructor kwarg is still accepted, for API compatibility
     with the harness's test_params override, but is currently unused.
-    `gates` is passed to the engine (pir-engine >= 3.6.0); it is an explicit
-    constructor argument so that it is recorded by get_params().
+    `gates` (pir-engine >= 3.6.0) and `safeguard` (>= 3.7.0) are passed to
+    the engine; they are explicit constructor arguments so that they are
+    recorded by get_params().
     """
 
-    def __init__(self, max_time=3600, random_state=None, gates="all", **pir_kwargs):
+    def __init__(
+        self,
+        max_time=3600,
+        random_state=None,
+        gates="all",
+        safeguard=True,
+        **pir_kwargs,
+    ):
         self.max_time = max_time
         self.random_state = random_state
         self.gates = gates
+        self.safeguard = safeguard
         self.pir_kwargs = {**_PIR_VANILLA_CONFIG, **pir_kwargs}
 
     def _build(self):
-        kw = dict(self.pir_kwargs, gates=self.gates)
+        kw = dict(self.pir_kwargs, gates=self.gates, safeguard=self.safeguard)
         seed = 0 if self.random_state is None else self.random_state
         try:
             return PIRRegressor(random_state=seed, **kw)
