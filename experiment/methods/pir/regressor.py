@@ -47,8 +47,18 @@ errors, accepts a form only if it predicts the other 25% within 5% of a
 flexible reference model, and replaces the current model only if it predicts
 those rows better. Rules are fixed in the engine.
 
-Engine: https://github.com/Qazi-pk/physics-engine (MIT, tag v3.10.0)
-Software DOI: https://doi.org/10.5281/zenodo.24156912
+Since pir-engine 3.11.0, a composition family (composition=True) adds laws of
+the form C*M(A)*g(k*u): a monomial times one function g of a monomial u, with g
+from a fixed library (exp(+-u), 1/(exp(u)-1), 1/(exp(u)+exp(-u)), sin(u),
+sin(u)**2, cos(u), arcsin(u), arccos(u), log(u), 1/(1+u), tanh(u),
+1/sqrt(1-u**2)) and exponents snapped to simple fractions. On exact data it is
+tried only when nothing so far is exact; on noisy data it runs inside the
+noise-tolerant stage with the same validated acceptance, and replaces another
+accepted form only if its held-out error is at least 2% lower. Rules are fixed
+in the engine.
+
+Engine: https://github.com/Qazi-pk/physics-engine (MIT, tag v3.11.0)
+Software DOI: https://doi.org/10.5281/zenodo.24585019
 Paper: https://doi.org/10.5281/zenodo.21351039
 """
 
@@ -57,7 +67,7 @@ import re
 import numpy as np
 
 # The classical engine. algorithms/pir/install.sh pip-installs this from the
-# public repo at tag v3.10.0.
+# public repo at tag v3.11.0.
 from physics_engine.sklearn_adapter import PIRRegressor
 from sklearn.base import BaseEstimator, RegressorMixin
 
@@ -85,8 +95,9 @@ class PIRClassicRegressor(BaseEstimator, RegressorMixin):
     `max_time` constructor kwarg is still accepted, for API compatibility
     with the harness's test_params override, but is currently unused.
     `gates` (pir-engine >= 3.6.0), `safeguard` (>= 3.7.0), `separability`
-    (>= 3.8.0) and `noise_tolerant` (>= 3.10.0) are passed to the engine; they
-    are explicit constructor arguments so that they are recorded by get_params().
+    (>= 3.8.0), `noise_tolerant` (>= 3.10.0) and `composition` (>= 3.11.0) are
+    passed to the engine; they are explicit constructor arguments so that they are
+    recorded by get_params().
     """
 
     def __init__(
@@ -97,6 +108,7 @@ class PIRClassicRegressor(BaseEstimator, RegressorMixin):
         safeguard=True,
         separability=True,
         noise_tolerant=True,
+        composition=True,
         **pir_kwargs,
     ):
         self.max_time = max_time
@@ -105,6 +117,7 @@ class PIRClassicRegressor(BaseEstimator, RegressorMixin):
         self.safeguard = safeguard
         self.separability = separability
         self.noise_tolerant = noise_tolerant
+        self.composition = composition
         self.pir_kwargs = {**_PIR_VANILLA_CONFIG, **pir_kwargs}
 
     def _build(self):
@@ -114,6 +127,7 @@ class PIRClassicRegressor(BaseEstimator, RegressorMixin):
             safeguard=self.safeguard,
             separability=self.separability,
             noise_tolerant=self.noise_tolerant,
+            composition=self.composition,
         )
         seed = 0 if self.random_state is None else self.random_state
         try:

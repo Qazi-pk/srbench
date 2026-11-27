@@ -27,4 +27,8 @@ description: >
   snaps exponents and coefficient ratios to simple fractions within their
   standard errors, and accepts a form only if it predicts held-out rows as
   well as a flexible reference model.
-  Software DOI: 10.5281/zenodo.24156912.
+  Since 3.11.0, a composition family fits laws of the form C*M(A)*g(k*u), a
+  monomial times one function g of a monomial u from a fixed library (tanh,
+  1/(exp(u)-1), sin^2, 1/(1+u) and others), on exact data and, under the same
+  validated acceptance, on noisy data.
+  Software DOI: 10.5281/zenodo.24585019.
